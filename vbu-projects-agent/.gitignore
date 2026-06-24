@@ -1,0 +1,41 @@
+# secrets / local config
+config/*.local.yaml
+.env
+*.pat
+*.key
+
+# state / data
+data/
+!data/.gitkeep
+reports/
+projects/*/processed_input/
+projects/*/generated/
+projects/*/input/
+
+# python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# testing
+.pytest_cache/
+.coverage
+htmlcov/

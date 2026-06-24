@@ -1,0 +1,38 @@
+{
+  "mcpServers": {
+    "vbu-projects-agent": {
+      "command": "python",
+      "args": ["-m", "vbu_projects_agent.mcp.server"],
+      "env": {},
+      "description": "VBU Projects Agent MCP server — exposes project context, ADO metrics, progress, and snapshot tools"
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Bash(vbu-agent:*)",
+      "Bash(python -m vbu_projects_agent*)",
+      "Bash(pytest*)",
+      "Bash(pip install*)",
+      "Bash(ls projects/*)",
+      "Read(projects/**)",
+      "Read(config/**)",
+      "Read(data/**)",
+      "Read(reports/**)",
+      "Write(projects/*/input/*)",
+      "Write(projects/*/context/*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"from vbu_projects_agent.security.scanner import scan_file_content; import sys; content=open(sys.argv[1]).read() if len(sys.argv)>1 else ''; scan_file_content(content, 'hook-prewrite')\" \"${file}\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}

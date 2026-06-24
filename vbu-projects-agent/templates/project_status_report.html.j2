@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ report.project_name }} — Status Report</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 960px;
+         margin: 2rem auto; padding: 0 1.5rem; color: #1e293b; line-height: 1.6; }
+  h1 { font-size: 1.8rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.2rem; color: #334155; border-bottom: 2px solid #e2e8f0;
+       padding-bottom: 0.4rem; margin-top: 2rem; }
+  .meta { color: #64748b; font-size: 0.85em; margin-bottom: 1.5rem; }
+  .health-badge {
+    display: inline-block; padding: 4px 16px; border-radius: 9999px;
+    font-weight: 700; font-size: 1.1em; color: white;
+    background: {% if report.health == 'green' %}#16a34a{% elif report.health == 'yellow' %}#ca8a04{% else %}#dc2626{% endif %};
+  }
+  .progress-bar { background: #e2e8f0; border-radius: 6px; height: 20px; margin: 8px 0; }
+  .progress-fill {
+    height: 20px; border-radius: 6px;
+    background: {% if report.health == 'green' %}#16a34a{% elif report.health == 'yellow' %}#ca8a04{% else %}#dc2626{% endif %};
+    width: {{ "%.1f"|format(report.overall_percent * 100) }}%;
+    transition: width 0.6s;
+  }
+  .risk-table, .milestone-table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+  .risk-table th, .risk-table td,
+  .milestone-table th, .milestone-table td { padding: 7px 10px; border: 1px solid #e2e8f0; text-align: left; }
+  .risk-table th, .milestone-table th { background: #f8fafc; font-weight: 600; font-size: 0.9em; }
+  .severity-high { color: #dc2626; font-weight: 600; }
+  .severity-critical { color: #7f1d1d; font-weight: 700; }
+  .severity-medium { color: #ca8a04; }
+  .severity-low { color: #64748b; }
+  .state-done { color: #16a34a; }
+  .state-at_risk { color: #dc2626; }
+  .state-late { color: #7f1d1d; font-weight: 700; }
+  .state-on_track { color: #2563eb; }
+  .exec-summary { background: #f8fafc; border-left: 4px solid #2563eb;
+                  padding: 1rem 1.2rem; border-radius: 0 6px 6px 0; margin: 0.5rem 0; }
+  .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;
+             color: #94a3b8; font-size: 0.8em; }
+  @media print { .no-print { display: none; } }
+</style>
+</head>
+<body>
+
+<h1>{{ report.project_name }}</h1>
+<div class="meta">
+  Client: {{ report.client or "—" }} &nbsp;|&nbsp;
+  Delivery Manager: {{ report.delivery_manager or "—" }} &nbsp;|&nbsp;
+  Generated: {{ report.generated_at[:10] }}
+</div>
+
+<!-- 1. Health -->
+<h2>Health Status</h2>
+<p>Overall: <span class="health-badge">{{ report.health | upper }}</span></p>
+<ul>
+  {% for reason in report.health_reasons %}<li>{{ reason }}</li>{% endfor %}
+</ul>
+
+<!-- 2. Executive Summary -->
+<h2>Executive Summary</h2>
+<div class="exec-summary">{{ report.executive_summary }}</div>
+
+<!-- 3. Progress -->
+<h2>Progress — {{ "%.1f"|format(report.overall_percent * 100) }}%</h2>
+<div class="progress-bar"><div class="progress-fill"></div></div>
+<p>{{ report.progress_summary }}</p>
+{% if report.progress_chart %}<div>{{ report.progress_chart | safe }}</div>{% endif %}
+
+<!-- 4. Milestones -->
+{% if report.include_timeline and report.milestones %}
+<h2>Milestones</h2>
+<table class="milestone-table">
+  <thead><tr><th>Milestone</th><th>Progress</th><th>Target</th><th>Forecast</th><th>State</th></tr></thead>
+  <tbody>
+    {% for m in report.milestones %}
+    <tr>
+      <td>{{ m.name }}</td>
+      <td>{{ "%.0f"|format(m.percent * 100) }}%</td>
+      <td>{{ m.target_date or "—" }}</td>
+      <td>{{ m.forecast_date or "—" }}</td>
+      <td class="state-{{ m.state }}">{{ m.state | replace("_", " ") | title }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- 5. Velocity & Forecast -->
+{% if report.include_velocity %}
+<h2>Velocity &amp; Forecast</h2>
+{% if report.velocity_per_day %}
+<p>Current velocity: <b>{{ "%.2f"|format(report.velocity_per_day) }}</b> units/day</p>
+{% endif %}
+{% if report.forecast_date %}
+<p>Forecast completion: <b>{{ report.forecast_date }}</b>
+  ({{ report.forecast_confidence or "unknown" }} confidence)</p>
+<p>{{ report.forecast_explanation }}</p>
+{% else %}
+<p><em>Insufficient history for a reliable forecast.</em></p>
+{% endif %}
+{% if report.velocity_chart %}<div>{{ report.velocity_chart | safe }}</div>{% endif %}
+{% endif %}
+
+<!-- 6. Risks -->
+{% if report.include_risks %}
+<h2>Risks &amp; Blockers ({{ report.open_risks | length }} open)</h2>
+{% if report.open_risks %}
+<table class="risk-table">
+  <thead><tr><th>ID</th><th>Description</th><th>Severity</th><th>Owner</th><th>Age</th><th>Status</th></tr></thead>
+  <tbody>
+    {% for r in report.open_risks %}
+    <tr>
+      <td>{{ r.id }}</td>
+      <td>{{ r.description }}</td>
+      <td class="severity-{{ r.severity }}">{{ r.severity | title }}</td>
+      <td>{{ r.owner or "—" }}</td>
+      <td>{{ r.age_days }}d</td>
+      <td>{{ r.status | title }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}<p><em>No open risks.</em></p>{% endif %}
+{% endif %}
+
+<!-- 7. Decisions -->
+<h2>Decision Log</h2>
+{% if report.decisions %}
+<ul>
+  {% for d in report.decisions %}
+  <li><b>{{ d.id }}</b> ({{ d.decided_at }}): {{ d.decision }}
+    {% if d.rationale %} — <em>{{ d.rationale }}</em>{% endif %}</li>
+  {% endfor %}
+</ul>
+{% else %}<p><em>No decisions recorded.</em></p>{% endif %}
+
+<!-- 8. Financials -->
+{% if report.include_financials %}
+<h2>Financial Context</h2>
+<p>Monthly Revenue: <b>{{ report.monthly_revenue | default(0) | int }}</b>
+  {% if report.revenue_at_risk %}<span style="color:#dc2626;font-weight:700"> ⚠ Revenue at Risk</span>{% endif %}</p>
+{% if report.total_contract_value %}
+<p>Total Contract Value: <b>{{ report.total_contract_value | int }}</b></p>
+{% endif %}
+{% endif %}
+
+<div class="footer">
+  VBU-Projects-Agent | Report generated at {{ report.generated_at }}
+</div>
+
+</body>
+</html>

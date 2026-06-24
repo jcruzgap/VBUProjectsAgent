@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/josephcruzmonge/Development/Claude/VBUProjects/vbu-projects-agent/.claude/commands)",
+      "Bash(pip install *)",
+      "Bash(python -m pytest src/vbu_projects_agent/tests/ -v)",
+      "Bash(python3 -m pytest src/vbu_projects_agent/tests/ -v)",
+      "Bash(vbu-agent --help)",
+      "Bash(vbu-agent project *)",
+      "Bash(ls /Users/josephcruzmonge/.claude/projects/-Users-josephcruzmonge-Development-Claude-VBUProjects/memory/ 2>/dev/null || echo \"empty\")",
+      "Read(//Users/josephcruzmonge/.claude/projects/-Users-josephcruzmonge-Development-Claude-VBUProjects/memory/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/josephcruzmonge/Development/Claude/VBUProjects/vbu-projects-agent/.claude"
+    ]
+  }
+}

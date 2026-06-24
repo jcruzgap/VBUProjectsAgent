@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VBU Executive Portfolio Dashboard</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 1200px;
+         margin: 2rem auto; padding: 0 1.5rem; color: #1e293b; }
+  h1 { font-size: 2rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.2rem; color: #334155; border-bottom: 2px solid #e2e8f0;
+       padding-bottom: 0.4rem; margin-top: 2rem; }
+  .meta { color: #64748b; font-size: 0.85em; margin-bottom: 1.5rem; }
+  .health-badge {
+    display: inline-block; padding: 4px 16px; border-radius: 9999px;
+    font-weight: 700; font-size: 1.1em; color: white;
+    background: {% if dashboard.portfolio_health == 'green' %}#16a34a
+                {% elif dashboard.portfolio_health == 'yellow' %}#ca8a04
+                {% else %}#dc2626{% endif %};
+  }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+               gap: 1rem; margin: 1.5rem 0; }
+  .kpi { background: #f8fafc; border-radius: 10px; padding: 1.2rem; text-align: center;
+          border: 1px solid #e2e8f0; }
+  .kpi-value { font-size: 2rem; font-weight: 700; color: #2563eb; }
+  .kpi-label { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+  .kpi-value.danger { color: #dc2626; }
+  table { width: 100%; border-collapse: collapse; margin: 0.5rem 0; }
+  th, td { padding: 8px 12px; border: 1px solid #e2e8f0; text-align: left; }
+  th { background: #f8fafc; font-weight: 600; font-size: 0.9em; }
+  .row-green { background: #f0fdf4; }
+  .row-yellow { background: #fefce8; }
+  .row-red { background: #fef2f2; }
+  .exec-summary { background: #eff6ff; border-left: 4px solid #2563eb;
+                  padding: 1rem 1.2rem; border-radius: 0 6px 6px 0; margin: 0.5rem 0; }
+  .footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;
+             color: #94a3b8; font-size: 0.8em; }
+</style>
+</head>
+<body>
+
+<h1>VBU Executive Portfolio Dashboard</h1>
+<div class="meta">Generated: {{ dashboard.generated_at[:10] }}</div>
+
+<!-- Portfolio health -->
+<h2>Portfolio Health: <span class="health-badge">{{ dashboard.portfolio_health | upper }}</span></h2>
+<div class="exec-summary">{{ dashboard.executive_summary }}</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-value">{{ dashboard.projects | length }}</div>
+    <div class="kpi-label">Active Projects</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value {% if dashboard.blocked_count > 0 %}danger{% endif %}">{{ dashboard.blocked_count }}</div>
+    <div class="kpi-label">Blocked</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value {% if dashboard.negative_trend_count > 0 %}danger{% endif %}">{{ dashboard.negative_trend_count }}</div>
+    <div class="kpi-label">Negative Trend</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value danger">${{ "{:,.0f}".format(dashboard.revenue_at_risk) }}</div>
+    <div class="kpi-label">Revenue at Risk ($/mo)</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value">${{ "{:,.0f}".format(dashboard.total_revenue) }}</div>
+    <div class="kpi-label">Total Portfolio Revenue ($/mo)</div>
+  </div>
+</div>
+
+<!-- Projects table -->
+<h2>All Projects</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Project</th>
+      <th>Health</th>
+      <th>Trend</th>
+      <th>Progress</th>
+      <th>Active Milestone</th>
+      <th>Forecast</th>
+      <th>High Risks</th>
+      <th>Revenue at Risk</th>
+      <th>Last Updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in dashboard.projects %}
+    <tr class="row-{{ p.health }}">
+      <td><b>{{ p.project_name }}</b></td>
+      <td>{{ p.health | upper }}</td>
+      <td>{{ "↑" if p.health_trend == "improving" else ("↓" if p.health_trend == "declining" else "→") }}</td>
+      <td>{{ "%.0f"|format(p.overall_percent * 100) }}%</td>
+      <td>{{ p.active_milestone or "—" }}</td>
+      <td>{{ p.forecast_date or "—" }}</td>
+      <td>{{ p.open_high_risks }}</td>
+      <td>{% if p.revenue_at_risk %}<b style="color:#dc2626">⚠ Yes</b>{% else %}No{% endif %}</td>
+      <td>{{ p.last_updated or "—" }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="footer">
+  VBU-Projects-Agent | Dashboard generated at {{ dashboard.generated_at }}
+</div>
+</body>
+</html>

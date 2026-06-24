@@ -1,0 +1,49 @@
+app:
+  name: VBU-Projects-Agent
+  environment: local
+  default_timezone: America/Costa_Rica
+
+claude:
+  provider_priority:
+    - api_key
+    - local_cli
+  api_key_env_var: ANTHROPIC_API_KEY
+  api_key: null                 # never hardcode; prefer the env var above
+  model: claude-sonnet-4-6
+  max_tokens: 8000
+  temperature: 0.2
+  local_cli_enabled: true
+  # optional per-task routing (falls back to `model` if omitted)
+  task_models:
+    classify_input: claude-haiku-4-5-20251001
+    reconcile_context: claude-sonnet-4-6
+    executive_summary: claude-sonnet-4-6
+
+storage:
+  provider: sqlite
+  sqlite_path: data/vbu_projects_agent.db
+  snapshots_path: data/snapshots
+  artifacts_path: artifacts
+
+projects:
+  root_path: projects
+  input_folder_name: input
+  archive_folder_name: processed_input
+
+reports:
+  output_path: reports
+  project_report_template: templates/project_status_report.html.j2
+  executive_dashboard_template: templates/executive_dashboard.html.j2
+  charts:
+    embed_mode: inline          # inline | cdn
+    trailing_window_days: 30
+
+slack:
+  default_message_style: executive_short
+  max_words: 180
+
+ado:
+  default_api_version: "7.1"
+  batch_size: 200
+  cache_ttl_seconds: 900
+  max_retries: 3

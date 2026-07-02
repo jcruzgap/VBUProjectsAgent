@@ -1,18 +1,26 @@
-"""Project scaffolding — create folder structure + project.yaml + empty context files."""
+"""Project scaffolding — new projects are created by copying the committed
+`_example/` template and substituting the project id, name, and PAT var name.
+
+`_example/` is the single source of truth for the project template. If it is
+missing (fresh checkout with the example not yet generated, or tests), it is
+regenerated from `_EXAMPLE_PROJECT_YAML` below.
+"""
 from __future__ import annotations
 
+import re
+import shutil
 from pathlib import Path
-
-import yaml
 
 from .context_manager import ContextManager
 
-_DEFAULT_PROJECT_YAML = """\
+EXAMPLE_ID = "_example"
+
+_EXAMPLE_PROJECT_YAML = """\
 project:
-  id: {project_id}
-  name: {project_name}
-  client: ""
-  delivery_manager: ""
+  id: example
+  name: Example Project
+  client: "Example Client"
+  delivery_manager: "Your Name"
   account_executive: ""
   delivery_director: ""
   timezone: America/Costa_Rica
@@ -22,10 +30,12 @@ project:
     red: 0.0
 
 azure_devops:
-  organization: ""
-  project: ""
-  base_url: ""
-  pat_env_var: {pat_env_var}
+  # Fill these three in for your own project:
+  organization: "your-org"          # e.g. the org in https://dev.azure.com/<org>
+  project: "Your ADO Project"        # the Azure DevOps project name
+  base_url: "https://dev.azure.com/your-org"
+  # Name of the environment variable (set it in your .env) holding your PAT:
+  pat_env_var: EXAMPLE_ADO_PAT
   pat_token: null
   api_version: "7.1"
 
@@ -81,6 +91,37 @@ slack:
   include: [health, progress, next_milestone, risks, asks]
 """
 
+_SUBDIRS = ["context", "input", "processed_input", "generated"]
+
+
+def _substitute(text: str, project_id: str, project_name: str, pat_env_var: str) -> str:
+    """Rewrite the first `id:`, first `name:`, and `pat_env_var:` lines.
+
+    In the template the first `id:`/`name:` belong to the top-level `project:`
+    block, so a single substitution each targets the right lines.
+    """
+    text = re.sub(r"(?m)^(\s*id:\s*).*$", rf"\g<1>{project_id}", text, count=1)
+    text = re.sub(r"(?m)^(\s*name:\s*).*$", rf"\g<1>{project_name}", text, count=1)
+    text = re.sub(r"(?m)^(\s*pat_env_var:\s*).*$", rf"\g<1>{pat_env_var}", text, count=1)
+    return text
+
+
+def ensure_example_project(projects_root: Path) -> Path:
+    """Create `projects_root/_example/` from the canonical template if missing.
+
+    Idempotent — never overwrites an existing `_example/project.yaml`.
+    """
+    projects_root.mkdir(parents=True, exist_ok=True)
+    example_dir = projects_root / EXAMPLE_ID
+    example_dir.mkdir(exist_ok=True)
+    for sub in _SUBDIRS:
+        (example_dir / sub).mkdir(exist_ok=True)
+    yaml_path = example_dir / "project.yaml"
+    if not yaml_path.exists():
+        yaml_path.write_text(_EXAMPLE_PROJECT_YAML, encoding="utf-8")
+    ContextManager(example_dir / "context").scaffold_empty_files("Example Project")
+    return example_dir
+
 
 class ProjectScaffolder:
     def __init__(self, projects_root: Path) -> None:
@@ -93,44 +134,38 @@ class ProjectScaffolder:
         project_name: str,
         force: bool = False,
     ) -> Path:
-        """Scaffold a new project folder. Returns the project directory."""
+        """Create a new project by copying the `_example/` template."""
         project_dir = self.root / project_id
         if project_dir.exists() and not force:
             raise FileExistsError(
                 f"Project directory already exists: {project_dir}. "
                 "Use --force to overwrite."
             )
-        project_dir.mkdir(parents=True, exist_ok=True)
 
-        # Sub-directories
-        for sub in ["context", "input", "processed_input", "generated"]:
-            (project_dir / sub).mkdir(exist_ok=True)
+        example_dir = ensure_example_project(self.root)
+        shutil.copytree(example_dir, project_dir, dirs_exist_ok=force)
 
-        # project.yaml
         pat_env_var = f"{project_id.upper().replace('-', '_')}_ADO_PAT"
         yaml_path = project_dir / "project.yaml"
-        if not yaml_path.exists() or force:
-            yaml_path.write_text(
-                _DEFAULT_PROJECT_YAML.format(
-                    project_id=project_id,
-                    project_name=project_name,
-                    pat_env_var=pat_env_var,
-                ),
-                encoding="utf-8",
-            )
-
-        # Scaffold empty context files
-        ctx_mgr = ContextManager(project_dir / "context")
-        ctx_mgr.scaffold_empty_files(project_name)
-
+        yaml_path.write_text(
+            _substitute(
+                yaml_path.read_text(encoding="utf-8"),
+                project_id,
+                project_name,
+                pat_env_var,
+            ),
+            encoding="utf-8",
+        )
         return project_dir
 
     def list_projects(self) -> list[str]:
-        """Return project IDs (folder names that have a project.yaml)."""
+        """Return project IDs (folders with a project.yaml), excluding `_example`."""
         return sorted(
             d.name
             for d in self.root.iterdir()
-            if d.is_dir() and (d / "project.yaml").exists()
+            if d.is_dir()
+            and not d.name.startswith("_")
+            and (d / "project.yaml").exists()
         )
 
     def project_dir(self, project_id: str) -> Path:

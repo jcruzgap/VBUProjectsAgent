@@ -57,6 +57,9 @@ def main_callback(
     _CONFIG_PATH = config
     _VERBOSE = verbose
 
+    from .env import load_env_file
+    load_env_file(base_dir)
+
     level = logging.DEBUG if verbose else (logging.WARNING if quiet else logging.INFO)
     logging.basicConfig(
         level=level,

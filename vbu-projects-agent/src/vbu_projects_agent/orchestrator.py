@@ -28,6 +28,8 @@ class Orchestrator:
 
     def __init__(self, base_dir: Path, config_path: Optional[Path] = None) -> None:
         self.base_dir = base_dir
+        from .env import load_env_file
+        load_env_file(base_dir)
         self.cfg = load_global_config(config_path or base_dir / "config" / "vbu-agent.yaml",
                                       base_dir=base_dir)
         install_redaction_filter()

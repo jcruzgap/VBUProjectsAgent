@@ -19,7 +19,10 @@ class TestLoadEnvFile:
         load_env_file(tmp_dir)
         assert os.environ["VBU_ENV_TEST"] == "from-shell"
 
-    def test_returns_none_when_no_env_file(self, tmp_dir: Path):
+    def test_returns_none_when_no_env_file(self, tmp_dir: Path, monkeypatch):
+        # chdir into the isolated tmp tree so the fallback upward search
+        # (find_dotenv from cwd) cannot climb into a real repo .env.
         missing = tmp_dir / "no-such-dir"
         missing.mkdir()
+        monkeypatch.chdir(missing)
         assert load_env_file(missing) is None

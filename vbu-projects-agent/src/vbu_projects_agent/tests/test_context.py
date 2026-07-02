@@ -65,6 +65,19 @@ class TestScaffolder:
         assert (project_dir / "context").exists()
         assert (project_dir / "input").exists()
 
+    def test_create_substitutes_id_name_and_pat_var(self, tmp_dir: Path):
+        scaffolder = ProjectScaffolder(tmp_dir / "projects")
+        project_dir = scaffolder.create("my-project", "My Project")
+        text = (project_dir / "project.yaml").read_text(encoding="utf-8")
+        assert "id: my-project" in text
+        assert "name: My Project" in text
+        assert "MY_PROJECT_ADO_PAT" in text
+
+    def test_create_from_committed_example(self, tmp_dir: Path):
+        scaffolder = ProjectScaffolder(tmp_dir / "projects")
+        scaffolder.create("my-project", "My Project")
+        assert (tmp_dir / "projects" / "_example" / "project.yaml").exists()
+
     def test_create_already_exists_raises(self, tmp_dir: Path):
         scaffolder = ProjectScaffolder(tmp_dir / "projects")
         scaffolder.create("my-project", "My Project")
@@ -77,13 +90,14 @@ class TestScaffolder:
         scaffolder.create("my-project", "My Project v2", force=True)
         assert (tmp_dir / "projects" / "my-project" / "project.yaml").exists()
 
-    def test_list_projects(self, tmp_dir: Path):
+    def test_list_projects_excludes_example(self, tmp_dir: Path):
         scaffolder = ProjectScaffolder(tmp_dir / "projects")
         scaffolder.create("alpha", "Alpha")
         scaffolder.create("beta", "Beta")
         projects = scaffolder.list_projects()
         assert "alpha" in projects
         assert "beta" in projects
+        assert "_example" not in projects
 
 
 class TestConflicts:

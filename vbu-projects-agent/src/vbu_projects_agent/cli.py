@@ -57,6 +57,9 @@ def main_callback(
     _CONFIG_PATH = config
     _VERBOSE = verbose
 
+    from .env import load_env_file
+    load_env_file(base_dir)
+
     level = logging.DEBUG if verbose else (logging.WARNING if quiet else logging.INFO)
     logging.basicConfig(
         level=level,
@@ -124,24 +127,40 @@ def cmd_config_validate() -> None:
 # Project commands
 # ---------------------------------------------------------------------------
 
+def _create_project(project: str, name: str, force: bool) -> None:
+    from .projects.scaffolder import ProjectScaffolder
+    orch = _orchestrator()
+    scaffolder = ProjectScaffolder(orch.base_dir / orch.cfg.projects.root_path)
+    try:
+        project_dir = scaffolder.create(project, name, force=force)
+    except FileExistsError as e:
+        console.print(f"[red]{e}[/red]")
+        raise typer.Exit(1)
+    console.print(f"[green]✓[/green] Project created at {project_dir}")
+    console.print("  Next steps:")
+    console.print(f"    1. Edit [bold]{project_dir / 'project.yaml'}[/bold] — set azure_devops.organization, project, base_url")
+    console.print(f"    2. Add your PAT to [bold].env[/bold] as [bold]{project.upper().replace('-', '_')}_ADO_PAT=...[/bold]")
+    console.print(f"    3. Run: [bold]vbu-agent project sync-ado --project {project}[/bold]")
+
+
+@project_app.command("new")
+def cmd_project_new(
+    project: str = typer.Option(..., "--project", "-p", help="Project ID (folder name)"),
+    name: str = typer.Option(..., "--name", "-n", help="Human-readable project name"),
+    force: bool = typer.Option(False, "--force"),
+) -> None:
+    """Create a new project by copying the _example template."""
+    _create_project(project, name, force)
+
+
 @project_app.command("create")
 def cmd_project_create(
     project: str = typer.Option(..., "--project", "-p", help="Project ID (folder name)"),
     name: str = typer.Option(..., "--name", "-n", help="Human-readable project name"),
     force: bool = typer.Option(False, "--force"),
 ) -> None:
-    """Scaffold a new project folder with project.yaml and empty context files."""
-    from .projects.scaffolder import ProjectScaffolder
-    orch = _orchestrator()
-    scaffolder = ProjectScaffolder(orch.base_dir / orch.cfg.projects.root_path)
-    try:
-        project_dir = scaffolder.create(project, name, force=force)
-        console.print(f"[green]✓[/green] Project created at {project_dir}")
-        console.print(f"  Next: fill in [bold]{project_dir}/project.yaml[/bold] then run:")
-        console.print(f"    vbu-agent project validate --project {project}")
-    except FileExistsError as e:
-        console.print(f"[red]{e}[/red]")
-        raise typer.Exit(1)
+    """Alias for `project new`."""
+    _create_project(project, name, force)
 
 
 @project_app.command("list")

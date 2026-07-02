@@ -28,6 +28,8 @@ class Orchestrator:
 
     def __init__(self, base_dir: Path, config_path: Optional[Path] = None) -> None:
         self.base_dir = base_dir
+        from .env import load_env_file
+        load_env_file(base_dir)
         self.cfg = load_global_config(config_path or base_dir / "config" / "vbu-agent.yaml",
                                       base_dir=base_dir)
         install_redaction_filter()
@@ -324,6 +326,16 @@ class Orchestrator:
     def doctor(self) -> dict:
         """Diagnose environment, providers, paths, DB connectivity."""
         results: dict[str, str] = {}
+
+        import os
+        env_path = self.base_dir / ".env"
+        has_key = bool(os.environ.get(self.cfg.claude.api_key_env_var, "").strip())
+        if env_path.exists() and has_key:
+            results["secrets"] = "OK (.env loaded, API key present)"
+        elif env_path.exists():
+            results["secrets"] = f"WARN: .env found but {self.cfg.claude.api_key_env_var} is empty"
+        else:
+            results["secrets"] = "WARN: no .env file — copy .env.example to .env and add your key"
 
         # Config
         try:

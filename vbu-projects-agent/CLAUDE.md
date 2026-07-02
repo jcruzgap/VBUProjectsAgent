@@ -7,11 +7,11 @@ A Python CLI (`vbu-agent`) that helps Velocity Business Unit Delivery Managers m
 ## Key commands
 
 ```bash
-# Setup
-pip install -e ".[dev]"
-vbu-agent init
-vbu-agent config validate
-vbu-agent doctor
+# Setup (from the repo root, one command)
+./setup.ps1            # Windows   (bash setup.sh on macOS/Linux)
+# then, inside vbu-projects-agent/ with the venv active:
+vbu-agent project new --project <id> --name "<Name>"  # add a project
+vbu-agent doctor                                        # check setup
 
 # Daily DM workflow
 vbu-agent project update --project <id> --dry-run   # preview

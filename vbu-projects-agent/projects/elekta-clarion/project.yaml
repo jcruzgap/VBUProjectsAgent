@@ -1,0 +1,71 @@
+project:
+  id: elekta-clarion
+  name: ElektaClarion
+  client: ""
+  delivery_manager: ""
+  account_executive: ""
+  delivery_director: ""
+  timezone: America/Costa_Rica
+  health_thresholds:
+    green: 0.85
+    yellow: 0.65
+    red: 0.0
+
+azure_devops:
+  organization: ""
+  project: ""
+  base_url: ""
+  pat_env_var: ELEKTA_CLARION_ADO_PAT
+  pat_token: null
+  api_version: "7.1"
+
+field_mappings:
+  id: System.Id
+  title: System.Title
+  state: System.State
+  tags: System.Tags
+  story_points: Microsoft.VSTS.Scheduling.StoryPoints
+  work_item_type: System.WorkItemType
+
+work_items:
+  wiql: |
+    SELECT [System.Id], [System.Title], [System.State], [System.Tags],
+           [Microsoft.VSTS.Scheduling.StoryPoints]
+    FROM WorkItems
+    WHERE [System.TeamProject] = @project
+      AND [System.WorkItemType] IN ('Product Backlog Item', 'Test Case')
+      AND [System.State] <> 'Removed'
+
+progress_model:
+  type: test_case_milestones
+  done_states: [Done, Closed, Passed]
+  milestones:
+    - id: alpha
+      name: Alpha Ready
+      target_passing: 100
+      target_date: ""
+    - id: beta
+      name: Beta Ready
+      target_passing: 200
+      target_date: ""
+    - id: production
+      name: Production Ready
+      target_passing: 300
+      target_date: ""
+
+revenue:
+  currency: USD
+  total_contract_value: 0
+  monthly_revenue: 0
+  revenue_recognition_model: manual
+
+reporting:
+  include_risks: true
+  include_financials: true
+  include_velocity: true
+  include_timeline: true
+
+slack:
+  channel_hint: ""
+  tone: concise_executive
+  include: [health, progress, next_milestone, risks, asks]

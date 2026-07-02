@@ -327,6 +327,16 @@ class Orchestrator:
         """Diagnose environment, providers, paths, DB connectivity."""
         results: dict[str, str] = {}
 
+        import os
+        env_path = self.base_dir / ".env"
+        has_key = bool(os.environ.get(self.cfg.claude.api_key_env_var, "").strip())
+        if env_path.exists() and has_key:
+            results["secrets"] = "OK (.env loaded, API key present)"
+        elif env_path.exists():
+            results["secrets"] = f"WARN: .env found but {self.cfg.claude.api_key_env_var} is empty"
+        else:
+            results["secrets"] = "WARN: no .env file — copy .env.example to .env and add your key"
+
         # Config
         try:
             issues = validate_global_config(self.cfg, self.base_dir)
